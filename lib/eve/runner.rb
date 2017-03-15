@@ -9,6 +9,7 @@ module Eve
 
     def run
       agent = AgentBuilder.build(evloop, @options)
+      agent.start
       evloop.run(0.01)
     end
 

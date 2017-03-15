@@ -6,16 +6,20 @@ require "eve/client"
 
 module Eve
   module Agent
-
     class Base
+      def self.build(evloop, options)
+        new(evloop, options[:addr], options[:port], options[:nodes])
+      end
+
       def initialize(evloop, addr, port, nodes)
         @loop = evloop
         @addr = addr
         @port = port
-        @nodes = nodes
-        @server = Server.new(@addr, @port, @loop)
+        @nodes = nodes || []
+        @server = Server.new(@addr, @port, @loop, @name)
+        @name = ENV["NODE_NAME"] || "#{@addr}:#{@port}"
         @clients = @nodes.map do |node|
-          Client.new(@loop, node[:addr], node[:port])
+          Client.new(@loop, node[:addr], node[:port], @name)
         end
         after_init
       end

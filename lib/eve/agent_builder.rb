@@ -5,9 +5,17 @@ module Eve
     DEFAULT_ADDR = "127.0.0.1"
     DEFAULT_PORT = 4321
 
-    def self.build(loop, options)
+    def self.build(evloop, options)
+      new(evloop).build(options)
+    end
+
+    def initialize(evloop)
+      @evloop = evloop
+    end
+
+    def build(options)
       type = options[:type]
-      agent_class(type).new(loop, options)
+      agent_class(type).build(@evloop, options)
     end
 
     def agent_class(type)
@@ -15,7 +23,7 @@ module Eve
       when nil
         raise "--type is required"
       when "hb", "heartbeat"
-        Eve::HeartBeatAgent
+        Eve::Agent::HeartBeatAgent
       else
         Eve::Agent.const_get(type.to_sym)
       end

@@ -3,24 +3,31 @@ require "eve/cli"
 module Eve
   class << self
     def logger
-      @logger = ::Logger.new(log_output, level: log_level)
+      @logger ||= ::Logger.new(log_device, level: log_level)
     end
 
-    def log_output
-      case ENV["LOG_DEV"]
+    def set_logger(device, level)
+      @logger = ::Logger.new(
+        log_device(device),
+        level: log_level(level)
+      )
+    end
+
+    def log_device(dev = ENV["LOG_DEV"])
+      case dev
       when "STDOUT"
         STDOUT
       when "STDERR"
         STDERR
-      when ""                   # not set
+      when "", nil              # not set
         STDOUT
       else                      # file
         ENV["LOG_DEV"]
       end
     end
 
-    def log_level
-      case ENV["LOG_LEVEL"]
+    def log_level(level = ENV["LOG_LEVEL"])
+      case level
       when "debug", "DEBUG"
         ::Logger::DEBUG
       when "info", "info"
