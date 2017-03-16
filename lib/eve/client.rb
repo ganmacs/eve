@@ -13,16 +13,30 @@ module Eve
     end
 
     def request(data)
-      Eve.logger.debug("client request #{@addr}:#{@port}")
-      client = ClientConnection.connect(@addr, @port)
-      @evloop.attach(client)
-      future = client.send_request(data)
-      Eve.logger.info("[CLIENT] #{future.get}") # blocking
+      conn = try_connect        # always establish new connction
+      future = conn.send_request(data)
+      unless future.error
+        Eve.logger.info("[CLIENT] #{future.get}") # blocking
+      end
+    end
+
+    def write(socket, buffer)
+      data = buffer.to_data
+      socket.write(data)
+    end
+
+    private
+
+    def try_connect
+      conn = ClientConnection.connect(@addr, @port, self)
+      @evloop.attach(conn)
+      conn
     end
 
     class ClientConnection < Cool.io::TCPSocket
-      def initialize(io)
+      def initialize(io, client)
         super(io)
+        @client = client
         @buffer = SafeBuffer.new
         @mutex = Mutex.new
         @connected = false
@@ -61,7 +75,7 @@ module Eve
       end
 
       def on_connect_failed
-        Eve.logger.error("connect failed, meaning our connection to their port was rejected")
+        Eve.logger.error("[CLIENT] connect failed, meaning our connection to their port was rejected")
         @future.cancel("connection failed")
         close if connected?
       end
@@ -76,7 +90,7 @@ module Eve
 
       def flash
         return unless @buffer.buffered?
-        write @buffer.to_data
+        @client.write(self, @buffer)
         Eve.logger.debug("[CLIENT] trying sending...")
         @buffer.reset
       end

@@ -9,15 +9,16 @@ module Eve
       @thread = Thread.current
     end
 
+    def error
+      get
+      @err
+    end
+
     def get
       join
       return @hook.call(@result, @err) if @hook
 
-      if @err
-        @err
-      else
-        @result
-      end
+      @result
     end
 
     def cancel(reason = "canceled")

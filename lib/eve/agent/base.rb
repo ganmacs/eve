@@ -16,8 +16,8 @@ module Eve
         @addr = addr
         @port = port
         @nodes = nodes || []
-        @server = Server.new(@addr, @port, @loop, @name)
         @name = ENV["NODE_NAME"] || "#{@addr}:#{@port}"
+        @server = Server.new(@addr, @port, @loop, @name)
         @clients = @nodes.map do |node|
           Client.new(@loop, node[:addr], node[:port], @name)
         end
