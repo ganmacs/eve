@@ -28,7 +28,7 @@ module Eve
 
       def on_read(data)
         Eve.logger.info("[SERVER] recv data: #{data}")
-        @agent.write_in_server(self, data)
+        @agent.on_read(self, data)
       end
     end
   end

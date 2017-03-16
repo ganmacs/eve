@@ -34,7 +34,7 @@ module Eve
       end
 
       # echo
-      def write_in_server(socket, data)
+      def on_read(socket, data)
         socket.write(data)
       end
 

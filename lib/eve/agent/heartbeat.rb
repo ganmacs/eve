@@ -22,7 +22,7 @@ module Eve
       end
 
       # echo
-      def write_in_server(socket, data)
+      def on_read(socket, data)
         if data == "ping"
           socket.write("pong")
         else
