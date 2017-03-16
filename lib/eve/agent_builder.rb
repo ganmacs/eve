@@ -37,7 +37,7 @@ module Eve
       when "hb", "heartbeat"
         Eve::Agent::HeartBeat
       else
-        Eve::Agent.const_get(type.to_sym)
+        Eve::Agent.const_get(type.capitalize.to_sym)
       end
     end
   end
