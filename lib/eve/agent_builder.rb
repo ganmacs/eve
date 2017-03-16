@@ -35,7 +35,7 @@ module Eve
       when nil
         raise "agent type is required"
       when "hb", "heartbeat"
-        Eve::Agent::HeartBeatAgent
+        Eve::Agent::HeartBeat
       else
         Eve::Agent.const_get(type.to_sym)
       end

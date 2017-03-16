@@ -3,7 +3,7 @@ require "eve/ticker"
 
 module Eve
   module Agent
-    class HeartBeatAgent < Base
+    class HeartBeat < Base
       DEFAULT_HEARTBEAT_PERIOD = 3      # sec
 
       def self.build(evloop, options)
