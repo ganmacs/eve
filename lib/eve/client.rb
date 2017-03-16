@@ -4,11 +4,10 @@ require "eve/future"
 
 module Eve
   class Client
-    def initialize(evloop, addr, port, name)
+    def initialize(evloop, addr, port)
       @addr = addr
       @port = port
       @evloop = evloop
-      @name = name
       Eve.logger.debug("client intilized #{addr}:#{port}")
     end
 

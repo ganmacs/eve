@@ -21,6 +21,15 @@ module Eve
         @hb_period = hb_period
       end
 
+      # echo
+      def write_in_server(socket, data)
+        if data == "ping"
+          socket.write("pong")
+        else
+          super
+        end
+      end
+
       private
 
       def after_start

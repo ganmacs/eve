@@ -7,6 +7,8 @@ require "eve/client"
 module Eve
   module Agent
     class Base
+      attr_reader :name, :port, :addr, :loop
+
       def self.build(evloop, options)
         new(evloop, options[:addr], options[:port], options[:nodes])
       end
@@ -17,23 +19,29 @@ module Eve
         @port = port
         @nodes = nodes || []
         @name = ENV["NODE_NAME"] || "#{@addr}:#{@port}"
-        @server = Server.new(@addr, @port, @loop, @name)
-        @clients = @nodes.map do |node|
-          Client.new(@loop, node[:addr], node[:port], @name)
-        end
-        after_init
       end
 
       def start
+        before_setup
+        @server = Server.new(self)
+        @clients = @nodes.map do |node|
+          Client.new(@loop, node[:addr], node[:port])
+        end
+
         before_start
         @server.listen
         after_start
       end
 
+      # echo
+      def write_in_server(socket, data)
+        socket.write(data)
+      end
+
       private
 
       # hook method
-      def after_init
+      def before_setup
       end
 
       # hook method

@@ -22,10 +22,8 @@ module Eve
       if options[:file_path]
         config = Config.new(options[:file_path])
         type ||= config[:type]
-        p config.send(:config)
         opt = config.merge(options)
       end
-
 
       agent_class(type).build(@evloop, opt)
     end

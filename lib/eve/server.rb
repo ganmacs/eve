@@ -2,23 +2,20 @@ require "cool.io"
 
 module Eve
   class Server
-    def initialize(addr, port, loop, name)
-      @addr = addr
-      @port = port
-      @loop = loop
-      @name = name
+    def initialize(agent)
+      @agent = agent
     end
 
     def listen
-      Eve.logger.info "Echo server listening on #{@addr}:#{@port}"
-      @server = Cool.io::TCPServer.new(@addr, @port, EchoServerConnection, @name)
-      @loop.attach(@server)
+      Eve.logger.info "Echo server listening on #{@agent.addr}:#{@agent.port}"
+      @server = Cool.io::TCPServer.new(@agent.addr, @agent.port, ServerConnection, @agent)
+      @agent.loop.attach(@server)
     end
 
-    class EchoServerConnection < Cool.io::TCPSocket
-      def initialize(io, name)
+    class ServerConnection < Cool.io::TCPSocket
+      def initialize(io, agent)
         super(io)
-        @name = name
+        @agent = agent
       end
 
       def on_connect
@@ -30,8 +27,8 @@ module Eve
       end
 
       def on_read(data)
-        Eve.logger.info("[SERVER] recv data #{remote_addr}:#{remote_port}")
-        write("#{data}:#{@name}")
+        Eve.logger.info("[SERVER] recv data: #{data}")
+        @agent.write_in_server(self, data)
       end
     end
   end
