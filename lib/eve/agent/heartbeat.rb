@@ -1,5 +1,5 @@
 require "eve/agent/base"
-require "eve/ticker"
+require "eve/util/ticker"
 
 module Eve
   module Agent

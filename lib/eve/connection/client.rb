@@ -1,6 +1,6 @@
 require "eve/connection/base"
-require "eve/future"
-require "eve/safe_buffer"
+require "eve/util/future"
+require "eve/util/safe_buffer"
 
 module Eve
   module Connection

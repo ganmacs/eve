@@ -1,6 +1,5 @@
 require "logger"
 require "cool.io"
-require "eve/ticker"
 require "eve/server"
 require "eve/client"
 

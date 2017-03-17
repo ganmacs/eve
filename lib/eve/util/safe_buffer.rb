@@ -11,13 +11,6 @@ module Eve
       end
     end
 
-    def flash
-      return false unless buffered?
-      write @buffer
-      reset_buffer
-      true
-    end
-
     def add(data)
       v = data.to_s           # is #to_s ok?
       @mutex.synchronize do
