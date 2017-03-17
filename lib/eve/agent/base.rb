@@ -33,9 +33,10 @@ module Eve
         after_start
       end
 
-      # echo
+      # This method is server's on_read.
+      # For examle it behaves like a EchoServer.
       def on_read(socket, data)
-        socket.write(data)
+        socket.send_message(data)
       end
 
       private

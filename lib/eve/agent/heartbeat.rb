@@ -24,7 +24,7 @@ module Eve
       # echo
       def on_read(socket, data)
         if data == "ping"
-          socket.write("pong")
+          socket.send_message("pong")
         else
           super
         end
