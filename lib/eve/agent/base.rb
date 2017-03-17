@@ -1,5 +1,3 @@
-require "logger"
-require "cool.io"
 require "eve/server"
 require "eve/client"
 
@@ -15,7 +13,7 @@ module Eve
       def initialize(evloop, addr, port, nodes)
         @loop = evloop
         @addr = addr
-        @port = port
+        @port = port.to_i
         @nodes = nodes || []
         @name = ENV["NODE_NAME"] || "#{@addr}:#{@port}"
       end

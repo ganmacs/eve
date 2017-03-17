@@ -3,9 +3,11 @@ require "eve/connection/client"
 
 module Eve
   class Client
+    attr_reader :port, :addr
+
     def initialize(evloop, addr, port)
       @addr = addr
-      @port = port
+      @port = port.to_i
       @evloop = evloop
       Eve.logger.debug("client intilized #{addr}:#{port}")
     end
@@ -14,7 +16,7 @@ module Eve
       conn = try_connect        # always establish new connction
       future = conn.send_request(data)
       unless future.error
-        Eve.logger.info("[CLIENT] #{future.get}") # blocking
+        Eve.logger.info("[CLIENT] #{future.get}")
       end
     end
 

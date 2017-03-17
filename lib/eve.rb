@@ -1,3 +1,4 @@
+require "logger"
 require "eve/cli"
 
 module Eve
