@@ -8,6 +8,11 @@ module Eve
         @agent = agent
       end
 
+      def send_response(data)
+        Eve.logger.debug("send response #{data} ")
+        send_message(data)
+      end
+
       private
 
       def read_message(data)

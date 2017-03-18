@@ -2,31 +2,34 @@ module Eve
   class SafeBuffer
     def initialize
       @mutex = Mutex.new
-      @buffer = ""
+      @buffer = []
     end
 
     def to_data
       @mutex.synchronize do
-        @buffer
+        if @buffer.size == 1
+          @buffer.first
+        else
+          @buffer
+        end
       end
     end
 
     def add(data)
-      v = data.to_s           # is #to_s ok?
       @mutex.synchronize do
-        @buffer << v
+        @buffer << data
       end
     end
 
     def reset
       @mutex.synchronize do
-        @buffer = ""
+        @buffer = []
       end
     end
 
     def buffered?
       @mutex.synchronize do
-        !@buffer.empty?
+        !@buffer.nil?
       end
     end
   end

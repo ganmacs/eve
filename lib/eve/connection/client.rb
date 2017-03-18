@@ -11,14 +11,12 @@ module Eve
         @buffer = SafeBuffer.new
         @mutex = Mutex.new
         @connected = false
-        @future = Future.new(self) do |result, err|
+        @future = Future.new do |result, err|
           if err == "connection failed"
             err
           elsif err
-            close
             err
           else
-            close
             result
           end
         end
@@ -45,8 +43,9 @@ module Eve
       private
 
       def read_message(data)
-        @future.set(data)
         Eve.logger.debug("[CLIENT] returned from server: #{data}")
+        close
+        @future.set(data)
       end
 
       def connected?
@@ -58,7 +57,7 @@ module Eve
       def flash
         return unless @buffer.buffered?
         @client.send_message(self, @buffer)
-        Eve.logger.debug("[CLIENT] trying sending...")
+        Eve.logger.debug("[CLIENT] sent data to #{remote_addr}:#{remote_port}")
         @buffer.reset
       end
     end

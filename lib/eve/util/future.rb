@@ -1,7 +1,6 @@
 module Eve
   class Future
-    def initialize(conn, &block)
-      @conn = conn
+    def initialize(&block)
       @set = false
       @result = nil
       @err = nil

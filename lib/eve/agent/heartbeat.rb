@@ -21,13 +21,8 @@ module Eve
         @hb_period = hb_period
       end
 
-      # echo
       def on_read(socket, data)
-        if data == "ping"
-          socket.send_message("pong")
-        else
-          super
-        end
+        socket.send_message(data == "ping" ? "pong" : data)
       end
 
       private

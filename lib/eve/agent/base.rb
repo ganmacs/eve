@@ -28,12 +28,12 @@ module Eve
         before_start
         @server.listen
         after_start
+
+        Eve.logger.info("Start agent!!")
       end
 
       # This method is server's on_read.
-      # For examle it behaves like a EchoServer.
       def on_read(socket, data)
-        socket.send_message(data)
       end
 
       private
