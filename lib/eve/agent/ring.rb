@@ -1,52 +1,41 @@
 require "eve/agent/base"
 
+# Following data is a exmple of sending data
+#
+#
+# In election, the process added its unique id
+# { type: 0, params: [2001,2002,2003] } is 'election'
+#
+# After election, the process send message which contains the leader of the cluster
+# { type: 1, params: leader_id } 1 is 'coordinate'
+#
+
 module Eve
   module Agent
     class Ring < Base
-      RETRY_COUNT = 1
+      # message types
+      ELECTION = "ELECTION"
+      COORDINATOR = "COORDINATOR"
+
       attr_reader :clients
 
       def self.build(evloop, options)
-        self.new(
-          evloop,
-          options[:addr],
-          options[:port],
-          options[:nodes],
-          retry_count: options[:retry] || RETRY_COUNT
-        )
+        new(evloop, options[:addr], options[:port], options[:nodes])
       end
 
-      def initialize(evloop, addr, port, nodes, retry_count:)
+      def initialize(evloop, addr, port, nodes)
         super(evloop, addr, port, nodes)
         @state = State.new
-        @retry_count = retry_count
       end
 
       def on_read(socket, data)
-        socket.send_response(status: 200, msg: "success")
+        socket.send_response("OK")
 
         case @state.state
         when State::COORDINATED
-          if data["type"] == 'voting'
-            @state.voted!
-            vote_and_pass(data["data"])
-          elsif data["type"] == 'coordi'
-            Eve.logger.debug("finish! election is over!!")
-          else
-            raise "Invalid message #{data}"
-          end
+          handle_in_coordinated(data)
         when State::VOTED
-          if data["type"] == 'voting'
-            v = data["data"].max
-            @state.leader! if v == @port
-            @state.coordinated!
-            announce(type: 'coordi', msg: v)
-          elsif data["type"] == 'coordi'
-            @state.coordinated!
-           announce(data)
-          else
-            raise "Invalid message #{data}"
-          end
+          handle_in_voted(data)
         else
           raise "Unknow state #{@state.state}"
         end
@@ -54,33 +43,56 @@ module Eve
 
       private
 
-      def after_start
-        @clients.sort! { |a, b| b.port <=> a.port }
-
-        return unless leader_candidate?
-        # sleep(2)                # wait untill other nodes starts
-        @state.voted!
-        vote_and_pass
-      end
-
-      def leader_candidate?
-        # max number of port
-        @clients.first.port.to_i < @port
-      end
-
-      def announce(data)
-        node = select_next_node
-        Thread.new do
-          v = node.async_request(data)
-          msg = v.error ? "recieve failed: #{v.error}" : "Received!!!!: #{v.get}"
-          Eve.logger.debug(msg)
+      def handle_in_coordinated(data)
+        case data["type"]
+        when ELECTION
+          send_vote_msg(data["params"])
+        when COORDINATOR
+          Eve.logger.info("Leader!!!!") if @state.leader?
+          Eve.logger.debug("finish! election is over!!")
+        else
+          raise "Invalid message #{data}"
         end
       end
 
-      def vote_and_pass(list = [])
+      def handle_in_voted(data)
+        case data["type"]
+        when ELECTION
+          v = data["params"].max
+          @state.leader! if v == @port
+          send_coordinate_msg(v)
+        when COORDINATOR
+          send_coordinate_msg(data["params"])
+        else
+          raise "Invalid message #{data}"
+        end
+      end
+
+      def after_start
+        return unless trigger?
+        # sleep(2)                # wait untill other nodes starts
+        send_vote_msg
+      end
+
+      # To invoke origin msg, search max number of port
+      def trigger?
+        @clients.first.port.to_i < @port
+      end
+
+      def send_coordinate_msg(v)
+        @state.coordinated!
+        send_msg(type: COORDINATOR, params: v)
+      end
+
+      def send_vote_msg(list = [])
+        @state.voted!
+        send_msg(type: ELECTION, params: list << @port)
+      end
+
+      def send_msg(data)
         node = select_next_node
         Thread.new do
-          v = node.async_request(type: 'voting', data: list << @port)
+          v = node.async_request(data)
           msg = v.error ? "recieve failed: #{v.error}" : "Received!!!!: #{v.get}"
           Eve.logger.debug(msg)
         end
@@ -91,8 +103,8 @@ module Eve
       end
 
       class State
-        VOTED = :voted
-        COORDINATED = :coordinated
+        VOTED = 'voted'
+        COORDINATED = 'coordinated'
         STATES = [VOTED, COORDINATED]
 
         attr_reader :state
@@ -115,12 +127,6 @@ module Eve
           define_method("#{s}!") do
             @mutex.synchronize do
               @state = s
-            end
-          end
-
-          define_method("#{s}?") do
-            @mutex.synchronize do
-              @state == s
             end
           end
         end

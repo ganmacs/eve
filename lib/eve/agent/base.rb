@@ -21,9 +21,9 @@ module Eve
       def start
         before_setup
         @server = Server.new(self)
-        @clients = @nodes.map do |node|
+        @clients = @nodes.map { |node|
           Client.new(@loop, node[:addr], node[:port])
-        end
+        }.sort! { |a, b| b.port <=> a.port }
 
         before_start
         @server.listen
