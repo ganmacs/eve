@@ -1,5 +1,4 @@
 require "eve/agent/base"
-require "eve/util/ticker"       # iru?
 
 module Eve
   module Agent
@@ -23,15 +22,15 @@ module Eve
       end
 
       def on_read(socket, data)
-        socket.send_response(status: 200, msg: "sucess")
+        socket.send_response(status: 200, msg: "success")
 
         unless data.include?(@port)
           Thread.new do
             v = pass_next(data)
             if v.error
-              Eve.logger.debug("Received!!!! #{v.get}")
-            else
               Eve.logger.debug("recieve failed #{v.error}")
+            else
+              Eve.logger.debug("Received!!!! #{v.get}")
             end
           end
         end
@@ -48,9 +47,9 @@ module Eve
         Thread.new do
           v = pass_next
           if v.error
-            Eve.logger.debug("Received!!!! #{v.get}")
+            Eve.logger.debug("recieve failed: #{v.error}")
           else
-            Eve.logger.debug("recieve failed #{v.error}")
+            Eve.logger.debug("Received!!!!: #{v.get}")
           end
         end
       end
