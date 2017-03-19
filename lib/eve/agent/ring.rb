@@ -4,10 +4,11 @@ require "eve/agent/base"
 #
 #
 # In election, the process added its unique id
-# { type: 0, params: [2001,2002,2003] } is 'election'
+# { type: 'election', params: [2001,2002,2003] }
 #
 # After election, the process send message which contains the leader of the cluster
-# { type: 1, params: leader_id } 1 is 'coordinate'
+# { type: 'coordinate', params: leader_id } 1 is
+
 #
 
 module Eve
@@ -32,10 +33,12 @@ module Eve
         socket.send_response("OK")
 
         case @state.state
-        when State::COORDINATED
-          handle_in_coordinated(data)
+        when State::UNCOORDINATED
+          handle_in_uncoordinated(data)
         when State::VOTED
           handle_in_voted(data)
+        when State::COORDINATED
+          handle_in_coordinated(data)
         else
           raise "Unknow state #{@state.state}"
         end
@@ -43,7 +46,7 @@ module Eve
 
       private
 
-      def handle_in_coordinated(data)
+      def handle_in_uncoordinated(data)
         case data["type"]
         when ELECTION
           send_vote_msg(data["params"])
@@ -58,14 +61,18 @@ module Eve
       def handle_in_voted(data)
         case data["type"]
         when ELECTION
-          v = data["params"].max
-          @state.leader! if v == @port
-          send_coordinate_msg(v)
+          leader_id = data["params"].max
+          send_coordinate_msg(leader_id)
         when COORDINATOR
-          send_coordinate_msg(data["params"])
+          leader_id = data["params"]
+          send_coordinate_msg(leader_id)
         else
           raise "Invalid message #{data}"
         end
+      end
+
+      def handle_in_coordinated(data)
+        # nothing
       end
 
       def after_start
@@ -80,7 +87,7 @@ module Eve
       end
 
       def send_coordinate_msg(v)
-        @state.coordinated!
+        @state.coordinated!(v)
         send_msg(type: COORDINATOR, params: v)
       end
 
@@ -105,25 +112,25 @@ module Eve
       class State
         VOTED = 'voted'
         COORDINATED = 'coordinated'
-        STATES = [VOTED, COORDINATED]
+        UNCOORDINATED = 'uncoordinated'
+        STATES = [VOTED, COORDINATED, UNCOORDINATED]
 
-        attr_reader :state
+        attr_reader :state, :leader_id
 
         def initialize
-          @leader = nil
-          @state = COORDINATED
+          @leader = -1
+          @state = UNCOORDINATED
           @mutex = Mutex.new
         end
 
-        def leader?
-          @leader
+        def coordinated!(leader_id)
+          @leader_id = leader_id
+          @mutex.synchronize do
+            @state = COORDINATED
+          end
         end
 
-        def leader!
-          @leader = true
-        end
-
-        STATES.each do |s|
+        (STATES - [COORDINATED]).each do |s|
           define_method("#{s}!") do
             @mutex.synchronize do
               @state = s
