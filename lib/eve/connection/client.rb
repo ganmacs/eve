@@ -11,15 +11,7 @@ module Eve
         @buffer = SafeBuffer.new
         @mutex = Mutex.new
         @connected = false
-        @future = Future.new do |result, err|
-          if err == "connection failed"
-            err
-          elsif err
-            err
-          else
-            result
-          end
-        end
+        @future = Future.new
       end
 
       def send_request(data)

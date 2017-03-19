@@ -24,16 +24,7 @@ module Eve
       def on_read(socket, data)
         socket.send_response(status: 200, msg: "success")
 
-        unless data.include?(@port)
-          Thread.new do
-            v = pass_next(data)
-            if v.error
-              Eve.logger.debug("recieve failed #{v.error}")
-            else
-              Eve.logger.debug("Received!!!! #{v.get}")
-            end
-          end
-        end
+        pass_next(data) unless data.include?(@port)
       end
 
       private
@@ -44,14 +35,7 @@ module Eve
         return unless leader_candidate?
         # sleep(2)                # wait untill other nodes starts
         Eve.logger.info("leader!!")
-        Thread.new do
-          v = pass_next
-          if v.error
-            Eve.logger.debug("recieve failed: #{v.error}")
-          else
-            Eve.logger.debug("Received!!!!: #{v.get}")
-          end
-        end
+        pass_next
       end
 
       def leader_candidate?
@@ -61,7 +45,11 @@ module Eve
 
       def pass_next(list = [])
         node = select_next_node
-        node.async_request(list << @port)
+        Thread.new do
+          v = node.async_request(list << @port)
+          msg = v.error ? "recieve failed: #{v.error}" : "Received!!!!: #{v.get}"
+          Eve.logger.debug(msg)
+        end
       end
 
       def select_next_node
