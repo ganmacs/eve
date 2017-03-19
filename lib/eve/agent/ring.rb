@@ -9,6 +9,8 @@ require "eve/agent/base"
 # After election, the process send message which contains the leader of the cluster
 # { type: 'coordinate', params: leader_id } 1 is
 
+# heartbeat message
+# { type: 'heartbeat' }
 #
 
 module Eve
@@ -17,6 +19,8 @@ module Eve
       # message types
       ELECTION = "ELECTION"
       COORDINATOR = "COORDINATOR"
+      HEARTBEAT = "HEARTBEAT"
+      REELECTION = "REELECTION"
 
       attr_reader :clients
 
@@ -27,6 +31,7 @@ module Eve
       def initialize(evloop, addr, port, nodes)
         super(evloop, addr, port, nodes)
         @state = State.new
+        @crashed = []
       end
 
       def on_read(socket, data)
@@ -50,9 +55,12 @@ module Eve
         case data["type"]
         when ELECTION
           send_vote_msg(data["params"])
+        when REELECTION
+          @state.reelection!
+          send_re_vote_msg(data["params"])
         when COORDINATOR
-          Eve.logger.info("Leader!!!!") if @state.leader?
-          Eve.logger.debug("finish! election is over!!")
+        when HEARTBEAT
+        # here is nothing to do
         else
           raise "Invalid message #{data}"
         end
@@ -62,9 +70,15 @@ module Eve
         case data["type"]
         when ELECTION
           leader_id = data["params"].max
+          Eve.logger.info("This is leader") if leader_id == @port
+          send_coordinate_msg(leader_id)
+        when REELECTION
+          leader_id = data["params"].max
+          Eve.logger.info("This is leader") if leader_id == @port
           send_coordinate_msg(leader_id)
         when COORDINATOR
           leader_id = data["params"]
+          Eve.logger.info("This is leader") if leader_id == @port
           send_coordinate_msg(leader_id)
         else
           raise "Invalid message #{data}"
@@ -72,10 +86,21 @@ module Eve
       end
 
       def handle_in_coordinated(data)
-        # nothing
+        case data["type"]
+        when REELECTION
+          @state.reelection!
+          send_re_vote_msg(data["params"])
+        when COORDINATOR
+        when HEARTBEAT
+        # here is nothing to do
+        else
+          raise "Invalid message #{data}"
+        end
       end
 
       def after_start
+        set_heartbeat
+
         return unless trigger?
         # sleep(2)                # wait untill other nodes starts
         send_vote_msg
@@ -86,9 +111,47 @@ module Eve
         @clients.first.port.to_i < @port
       end
 
+      def set_heartbeat
+        @cc = 0
+        Ticker.start(2) do
+          next unless @state.state == State::COORDINATED
+          heartbeat
+        end
+      end
+
+      # thread?
+      def heartbeat
+        node = next_node
+        v = node.async_request(type: HEARTBEAT)
+
+        if v.error
+          Eve.logger.debug(v.error)
+          @cc += 1
+        else
+          # to fix logger.debug
+          Eve.logger.info(v.get)
+          @cc = 0               # reset
+        end
+
+        if @cc == 3
+          @state.uncoordinated!
+          @crashed << node
+          start_election
+        end
+      end
+
+      def start_election
+        send_re_vote_msg
+      end
+
       def send_coordinate_msg(v)
         @state.coordinated!(v)
         send_msg(type: COORDINATOR, params: v)
+      end
+
+      def send_re_vote_msg(list = [])
+        @state.voted!
+        send_msg(type: REELECTION, params: list << @port)
       end
 
       def send_vote_msg(list = [])
@@ -97,7 +160,7 @@ module Eve
       end
 
       def send_msg(data)
-        node = select_next_node
+        node = next_node
         Thread.new do
           v = node.async_request(data)
           msg = v.error ? "recieve failed: #{v.error}" : "Received!!!!: #{v.get}"
@@ -105,8 +168,11 @@ module Eve
         end
       end
 
-      def select_next_node
-        @clients.find { |c| c.port < @port } || @clients.first
+      def next_node(port = @port)
+        l, r = (@clients - @crashed).partition { |c| c.port < port }
+        v = l + r
+        raise 'Available node is nothing' if v.empty?
+        v.first
       end
 
       class State
@@ -121,6 +187,13 @@ module Eve
           @leader = -1
           @state = UNCOORDINATED
           @mutex = Mutex.new
+        end
+
+        def reelection!
+          @leader = -1
+          @mutex.synchronize do
+            @state = UNCOORDINATED
+          end
         end
 
         def coordinated!(leader_id)
