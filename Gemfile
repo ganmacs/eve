@@ -2,3 +2,4 @@
 source "https://rubygems.org"
 
 gem "cool.io"
+gem "msgpack", "~> 1.0"
