@@ -15,14 +15,14 @@ module Eve
       self
     end
 
-    def start(&_block)
-      @count.times do
+    def start(on: [], &_block)
+      @count.times do |i|
         begin
           yield
           return                # sucess
-        rescue => e
-          # sleep?
-          Eve.logger.error(e)
+        rescue *on => e
+          Eve.logger.error("rescue in retry: #{e}")
+          sleep(i)
         end
       end
 
