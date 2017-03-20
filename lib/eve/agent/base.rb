@@ -23,7 +23,7 @@ module Eve
         @server = Server.new(self)
         @clients = @nodes.map { |node|
           Client.new(@loop, node[:addr], node[:port])
-        }.sort! { |a, b| b.port <=> a.port }
+        }.sort! { |a, b| a.port <=> b.port }
 
         before_start
         @server.listen

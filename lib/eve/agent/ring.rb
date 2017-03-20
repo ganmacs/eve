@@ -112,7 +112,7 @@ module Eve
 
       # To invoke origin msg, search max number of port
       def trigger?
-        @clients.first.port.to_i < @port
+        @clients.last.port.to_i < @port
       end
 
       def set_heartbeat
@@ -165,8 +165,8 @@ module Eve
       end
 
       def next_node(port = @port)
-        l, r = (@clients - @crashed).partition { |c| c.port < port }
-        v = l + r
+        less, greater = (@clients - @crashed).partition { |c| c.port < port }
+        v = greater + less
         raise 'Available node is nothing' if v.empty?
         v.first
       end
