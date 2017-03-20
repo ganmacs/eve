@@ -181,16 +181,26 @@ module Eve
         UNCOORDINATED = 'uncoordinated'
         STATES = [VOTED, COORDINATED, UNCOORDINATED]
 
-        attr_reader :state, :leader_id
+        attr_reader :leader_id
 
         def initialize
-          @leader = -1
+          @leader_id = -1
           @state = UNCOORDINATED
           @mutex = Mutex.new
         end
 
+        def state
+          @mutex.synchronize do
+            @state
+          end
+        end
+
+        def leader?(id)
+          @leader_id == id
+        end
+
         def reelection!
-          @leader = -1
+          @leader_id = -1
           @mutex.synchronize do
             @state = UNCOORDINATED
           end
