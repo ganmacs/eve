@@ -16,17 +16,20 @@ module Eve
     end
 
     def start(on: [], &_block)
+      error = nil
       @count.times do |i|
         begin
-          yield
-          return                # sucess
+          ret = yield
+          return ret
         rescue *on => e
+          error = e
           Eve.logger.error("rescue in retry: #{e}")
           sleep(i)
         end
       end
 
-      @block.call if @block
+      @block.call(error) if @block
+      error
     end
   end
 end

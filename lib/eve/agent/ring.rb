@@ -118,11 +118,13 @@ module Eve
         @cc = 0
         Ticker.start(2) do
           next unless @state.state == State::COORDINATED
-          send_msg(next_node, type: HEARTBEAT)
+          async_send_msg(next_node, type: HEARTBEAT)
         end
       end
 
       def start_election
+        Eve.logger.info("election re-start")
+        # this code runs once, so if this method failed, never restart eletion
         send_re_vote_msg
       end
 
@@ -153,15 +155,20 @@ module Eve
       end
 
       def send_msg(node, data)
-        r = Eve::Retry.new(3).set_fallback do
+        r = Eve::Retry.new(3).set_fallback do |e|
           @crashed << node
+          if e.is_a?(Eve::Connection::ConnectionError) && @state.state == State::VOTED
+            # invoke this code only after calling start_election
+            send_msg(next_node, data) # search next node and retry
+          end
+
           if @state.leader?(node.port)
-            @state.uncoordinated!
+            @state.uncoordinated! # stop heartbeat
             start_election
           end
         end
 
-        r.start(on: [Eve::Future::Timeout, Eve::Future::Cancel]) do
+        r.start(on: [Eve::Future::Timeout, Eve::Future::Cancel, Eve::Connection::ConnectionError]) do
           v = node.async_request(data)
           raise(v.error) if v.error
           Eve.logger.info("Received: #{v.get}")
