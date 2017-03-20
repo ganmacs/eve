@@ -142,7 +142,14 @@ module Eve
       end
 
       def async_send_msg(node, data)
-        Thread.new { send_msg(node, data) }
+        t = Thread.current
+        Thread.new do
+          begin
+            send_msg(node, data)
+          rescue => e
+            t.raise(e)
+          end
+        end
       end
 
       def send_msg(node, data)
