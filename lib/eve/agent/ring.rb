@@ -119,7 +119,7 @@ module Eve
         @cc = 0
         Ticker.start(2) do
           next unless @state.state == State::COORDINATED
-          send_msg(type: HEARTBEAT)
+          send_msg(next_node, type: HEARTBEAT)
         end
       end
 
@@ -129,31 +129,29 @@ module Eve
 
       def send_coordinate_msg(v)
         @state.coordinated!(v)
-        async_send_msg(type: COORDINATOR, params: v)
+        async_send_msg(next_node, type: COORDINATOR, params: v)
       end
 
       def send_re_vote_msg(list = [])
         @state.voted!
-        async_send_msg(type: REELECTION, params: list << @port)
+        async_send_msg(next_node, type: REELECTION, params: list << @port)
       end
 
       def send_vote_msg(list = [])
         @state.voted!
-        async_send_msg(type: ELECTION, params: list << @port)
+        async_send_msg(next_node, type: ELECTION, params: list << @port)
       end
 
-      def async_send_msg(data)
-        Thread.new { send_msg(data) }
+      def async_send_msg(node, data)
+        Thread.new { send_msg(node, data) }
       end
 
-      def send_msg(data)
-        node = next_node
-
+      def send_msg(node, data)
         r = Eve::Retry.new(3).set_fallback do
           @crashed << node
           if @state.leader?(node.port)
-            start_election
             @state.uncoordinated!
+            start_election
           end
         end
 
