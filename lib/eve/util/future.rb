@@ -1,5 +1,21 @@
+require "eve/error/timeout"
+
 module Eve
   class Future
+    class Cancel < StandardError
+      def initialize(message)
+        @msg = message
+      end
+
+      def to_s
+        if @msg
+          "Future::Cancel #{@msg}"
+        else
+          Future::Cancel
+        end
+      end
+    end
+
     def initialize(&block)
       @set = false
       @result = nil
@@ -20,9 +36,9 @@ module Eve
       @result
     end
 
-    def cancel(reason = "canceled")
+    def cancel(reason = nil)
       @set = true
-      @err = reason
+      @err = Cancel.new(reason)
       @thread.wakeup
     end
 
@@ -38,7 +54,8 @@ module Eve
     def join
       unless @set
         sleep(10)
-        raise 'Timeout' unless @set
+
+        raise Eve::Error::Timeout unless @set
       end
     end
   end
