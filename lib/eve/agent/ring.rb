@@ -150,17 +150,17 @@ module Eve
         node = next_node
 
         r = Eve::Retry.new(3).set_fallback do
-          @state.uncoordinated!
           @crashed << node
-          start_election if @state.leader?(node.port)
+          if @state.leader?(node.port)
+            start_election
+            @state.uncoordinated!
+          end
         end
 
         r.start(on: [Eve::Error::Timeout, Eve::Future::Cancel]) do
           v = node.async_request(data)
-          begin
-            raise(v.error) if v.error
-            Eve.logger.info("Received: #{v.get}")
-          end
+          raise(v.error) if v.error
+          Eve.logger.info("Received: #{v.get}")
         end
       end
 
