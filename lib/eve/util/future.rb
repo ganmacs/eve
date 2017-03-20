@@ -35,9 +35,13 @@ module Eve
       @result
     end
 
-    def cancel(reason = nil)
+    def cancel(reason = "")
       @set = true
-      @err = Cancel.new(reason)
+      @err = if reason.is_a?(String)
+               Cancel.new(reason)
+             else
+               reason.new
+             end
       @thread.wakeup
     end
 

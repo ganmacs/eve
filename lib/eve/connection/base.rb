@@ -3,6 +3,8 @@ require "eve/protocol/msg_packable"
 
 module Eve
   module Connection
+    class ConnectionError < StandardError; end
+
     class Base < Cool.io::TCPSocket
       include Eve::Protocol::MsgPackable
 

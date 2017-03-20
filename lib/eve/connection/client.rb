@@ -28,7 +28,7 @@ module Eve
 
       def on_connect_failed
         Eve.logger.error("[CLIENT] connect failed, meaning our connection to their port was rejected")
-        @future.cancel("connection failed")
+        @future.cancel(ConnectionError)
         close if connected?
       end
 
