@@ -1,7 +1,6 @@
-require "eve/error/timeout"
-
 module Eve
   class Future
+    class Timeout < StandardError; end
     class Cancel < StandardError
       def initialize(message)
         @msg = message
@@ -55,7 +54,7 @@ module Eve
       unless @set
         sleep(10)
 
-        raise Eve::Error::Timeout unless @set
+        raise Eve::Future::Timeout unless @set
       end
     end
   end

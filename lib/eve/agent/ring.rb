@@ -1,6 +1,5 @@
 require "eve/agent/base"
 require "eve/util/retry"
-require "eve/error/timeout"
 
 # Following data are exmples of sending data
 #
@@ -155,7 +154,7 @@ module Eve
           end
         end
 
-        r.start(on: [Eve::Error::Timeout, Eve::Future::Cancel]) do
+        r.start(on: [Eve::Future::Timeout, Eve::Future::Cancel]) do
           v = node.async_request(data)
           raise(v.error) if v.error
           Eve.logger.info("Received: #{v.get}")
