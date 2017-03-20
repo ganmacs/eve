@@ -1,4 +1,5 @@
 require "eve/agent/base"
+require "eve/util/retry"
 
 # Following data is a exmple of sending data
 #
@@ -80,6 +81,8 @@ module Eve
           leader_id = data["params"]
           Eve.logger.info("This is leader") if leader_id == @port
           send_coordinate_msg(leader_id)
+        when HEARTBEAT
+        # ingore
         else
           raise "Invalid message #{data}"
         end
@@ -119,24 +122,19 @@ module Eve
         end
       end
 
-      # thread?
       def heartbeat
         node = next_node
-        v = node.async_request(type: HEARTBEAT)
 
-        if v.error
-          Eve.logger.debug(v.error)
-          @cc += 1
-        else
-          # to fix logger.debug
-          Eve.logger.info(v.get)
-          @cc = 0               # reset
-        end
-
-        if @cc == 3
+        r = Eve::Retry.new(3).set_fallback do
           @state.uncoordinated!
           @crashed << node
-          start_election
+          start_election if @state.leader?(node.port)
+        end
+
+        r.start do
+          v = node.async_request(type: HEARTBEAT)
+          raise(v.error) if v.error
+          Eve.logger.info(v.get)
         end
       end
 
