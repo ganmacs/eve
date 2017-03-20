@@ -1,15 +1,15 @@
 require "eve/agent/base"
 require "eve/util/retry"
 
-# Following data is a exmple of sending data
+# Following data are exmples of sending data
 #
 #
 # In election, the process added its unique id
 # { type: 'election', params: [2001,2002,2003] }
 #
 # After election, the process send message which contains the leader of the cluster
-# { type: 'coordinate', params: leader_id } 1 is
-
+# { type: 'coordinate', params: leader_id }
+#
 # heartbeat message
 # { type: 'heartbeat' }
 #
