@@ -1,5 +1,6 @@
 require "eve/agent/base"
 require "eve/util/retry"
+require "eve/error/timeout"
 
 # Following data are exmples of sending data
 #
@@ -118,23 +119,7 @@ module Eve
         @cc = 0
         Ticker.start(2) do
           next unless @state.state == State::COORDINATED
-          heartbeat
-        end
-      end
-
-      def heartbeat
-        node = next_node
-
-        r = Eve::Retry.new(3).set_fallback do
-          @state.uncoordinated!
-          @crashed << node
-          start_election if @state.leader?(node.port)
-        end
-
-        r.start do
-          v = node.async_request(type: HEARTBEAT)
-          raise(v.error) if v.error
-          Eve.logger.info(v.get)
+          send_msg(type: HEARTBEAT)
         end
       end
 
@@ -144,25 +129,38 @@ module Eve
 
       def send_coordinate_msg(v)
         @state.coordinated!(v)
-        send_msg(type: COORDINATOR, params: v)
+        async_send_msg(type: COORDINATOR, params: v)
       end
 
       def send_re_vote_msg(list = [])
         @state.voted!
-        send_msg(type: REELECTION, params: list << @port)
+        async_send_msg(type: REELECTION, params: list << @port)
       end
 
       def send_vote_msg(list = [])
         @state.voted!
-        send_msg(type: ELECTION, params: list << @port)
+        async_send_msg(type: ELECTION, params: list << @port)
+      end
+
+      def async_send_msg(data)
+        Thread.new { send_msg(data) }
       end
 
       def send_msg(data)
         node = next_node
-        Thread.new do
+
+        r = Eve::Retry.new(3).set_fallback do
+          @state.uncoordinated!
+          @crashed << node
+          start_election if @state.leader?(node.port)
+        end
+
+        r.start(on: [Eve::Error::Timeout, Eve::Future::Cancel]) do
           v = node.async_request(data)
-          msg = v.error ? "recieve failed: #{v.error}" : "Received!!!!: #{v.get}"
-          Eve.logger.debug(msg)
+          begin
+            raise(v.error) if v.error
+            Eve.logger.info("Received: #{v.get}")
+          end
         end
       end
 
