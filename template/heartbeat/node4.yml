@@ -1,6 +1,6 @@
 :type: heartbeat
-:addr: <%= ENV['ADDR'] %>
-:port: <%= ENV['PORT'] %>
+:addr: "127.0.0.1"
+:port: "3004"
 :nodes:
   - "127.0.0.1:3001"
   - "127.0.0.1:3002"

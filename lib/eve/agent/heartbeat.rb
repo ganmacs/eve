@@ -22,7 +22,7 @@ module Eve
       end
 
       def on_read(socket, data)
-        socket.send_message(data == "ping" ? "pong" : data)
+        socket.send_message("ok")
       end
 
       private
@@ -30,26 +30,27 @@ module Eve
       def after_start
         return unless leader?
 
-        Ticker.start(@hb_period) do
+        set_heartbeat
+      end
+
+      def set_heartbeat
+        Ticker.execute(@hb_period) do
           heartbeat
         end
       end
 
       def leader?
-        !@clients.empty?
+        @clients.last.port.to_i < @port
       end
 
       def heartbeat
-        Eve.logger.debug("Start heartbeat ...")
-
-        current = Thread.current
         @clients.each do |cli|
           Thread.new(cli) do |c| # to limit
-            begin
-              c.request("ping")
-            rescue => e
-              current.raise(e)
-              break
+            future = c.async_request(type: 'HEARTBEAT')
+            if future.error
+              Eve.logger.error(future.error)
+            else
+              Eve.logger.info(future.get)
             end
           end
         end

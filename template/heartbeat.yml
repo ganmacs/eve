@@ -1,3 +1,0 @@
-:type: heartbeat
-:addr: <%= ENV['ADDR'] %>
-:port: <%= ENV['PORT'] %>
