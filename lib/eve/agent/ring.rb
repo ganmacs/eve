@@ -115,7 +115,6 @@ module Eve
       end
 
       def set_heartbeat
-        @cc = 0
         Ticker.start(2) do
           next unless @state.state == State::COORDINATED
           async_send_msg(next_node, type: HEARTBEAT)
